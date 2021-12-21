@@ -1,0 +1,35 @@
+# CircleCI - Example
+
+Demo of an application with CircleCI.
+
+Example of a yml file: 
+
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/openjdk:8-jdk (specifies jdk)
+    working_directory: ~/repo
+    environment:
+      MAVEN_OPTS: -Xmx3200m     
+    steps:
+      - checkout
+      - restore_cache: (Download and cache dependencies)
+keys:
+          - v1-dependencies-{{ checksum "pom.xml" }}
+          - v1-dependencies-
+      - run: mvn clean
+      - run: mvn test -s settings.xml (this is very important: you have to specify for each mvn command the arguments "-s settings.xml" with the mule repos so that CircleCI knows from where to take some plugins)
+      - run: mvn install -s settings.xml
+      - run: mvn package -s settings.xml
+      - run:  (a bash command case to select environment depending on the branch where you pushed your commits)
+          case $CIRCLE_BRANCH in
+            'master') export environment='Sandbox';;
+            'develop') export environment='Test';;
+esac;
+          echo $environment; 
+          mvn mule:deploy -Dworkers=0.1 -DworkerType=Micro -Denvironment=$environment -Dredeploy=true -DmuleVersion=3.9.0 -s settings.xml
+      - save_cache:
+paths:
+            - ~/.m2
+          key: v1-dependencies-{{ checksum "pom.xml" }}
